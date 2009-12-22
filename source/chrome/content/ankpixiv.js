@@ -1205,7 +1205,26 @@ saved-minute  = ?saved-minute?
       }
 
       // version 2
-      // TODO
+      function fileURItoLocalPath (url) {
+        let IOService =
+          Components.classes['@mozilla.org/network/io-service;1'].
+            getService(Components.interfaces.nsIIOService);
+        let fileHandler =
+          IOService.getProtocolHandler('file').QueryInterface(Components.interfaces.nsIFileProtocolHandler);
+        return fileHandler.getFileFromURLSpec(url).path;
+      }
+
+      let olds = this.Storage.oselect('histories', '(version = 1)');
+      for each (let old in olds) {
+        try {
+          //this.Storage.update('histories',
+          // old.local_path -> fileURItoLocalPath
+          // old.filename -> extractFilename . fileURItoLocalPath
+          // old.version -> 3
+        } catch (e) {
+          Application.console.log(e);
+        }
+      }
     },
 
     /********************************************************************************

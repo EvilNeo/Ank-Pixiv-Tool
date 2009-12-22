@@ -153,6 +153,60 @@ try {
       return this.database.executeSimpleSQL(q);
     },
 
+
+    /*
+     * JSオブジェクトを挿入
+     */
+    update_: function (table, values, conditions) {
+      if ('string' == typeof table)
+        table = this.tables[table];
+
+      let ns = [], vs = [], ps = [], vi = 0;
+      for (let fieldName in values) {
+        ns.push(fieldName);
+        (function (idx, type, value) {
+          vs.push(function (stmt) {
+            switch (type) {
+              case 'string':   return stmt.bindUTF8StringParameter(idx, value);
+              case 'text':     return stmt.bindUTF8StringParameter(idx, value);
+              case 'integer':  return stmt.bindInt32Parameter(idx, value);
+              case 'boolean':  return stmt.bindInt32Parameter(idx, value);
+              case 'datetime': return stmt.bindUTF8StringParameter(idx, value);
+              default:         return stmt.bindNullParameter(idx);
+            }
+          });
+        })(vi, table.fields[fieldName], values[fieldName]);
+        ps.push('?' + (++vi));
+      }
+
+      let q =
+        'update ' + table.name +
+        ' set ' + ns.map(function (name) (name + ' =  ?')).join(', ') +
+        (conditions ? ' where ' + conditions : '');
+
+      this.createStatement(q, function (stmt) {
+        try {
+          for (let i = 0; i < vs.length; i++) {
+            try {
+              (vs[i])(stmt);
+            } catch (e) {
+              AnkUtils.dumpError(e);
+              AnkUtils.dump(["vs[" + i + "] dumped",
+                             "type: " + (typeof vs[i]),
+                             "value:" + vs[i]]);
+              if (AnkUtils.DEBUG)
+                AnkUtils.simplePopupAlert('エラー発生', e);
+            }
+          }
+          let result = stmt.executeStep();
+        } finally {
+          stmt.reset();
+        }
+        return result;
+      });
+    },
+
+
     exists: function (tableName, conditions, block) {
       let _block = function (stmt) {
         if (typeof block == 'function')
