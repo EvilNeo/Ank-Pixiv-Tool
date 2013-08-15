@@ -197,165 +197,178 @@ try {
     })(), // }}}
 
     info: (function () { // {{{
-      let illust = {
-        get id ()
-          parseInt(AnkPixiv.elements.doc.querySelector('#rpc_i_id').textContent, 10),
+      let pixiv = (function () { // {{{
+        let illust = {
+          get id ()
+            parseInt(AnkPixiv.elements.doc.querySelector('#rpc_i_id').textContent, 10),
 
-        get dateTime ()
-          AnkPixiv.info.illust.worksData.dateTime,
+          get dateTime ()
+            AnkPixiv.info.illust.worksData.dateTime,
 
-        get size ()
-          AnkPixiv.info.illust.worksData.size,
+          get size ()
+            AnkPixiv.info.illust.worksData.size,
 
-        get tags () {
-          let elem = AnkPixiv.elements.illust.tags;
-          if (!elem)
-            return [];
-          return AnkUtils.A(elem.querySelectorAll('.tag > .text'))
-                  .map(function (e) AnkUtils.trim(e.textContent))
-                  .filter(function (s) s && s.length);
-        },
+          get tags () {
+            let elem = AnkPixiv.elements.illust.tags;
+            if (!elem)
+              return [];
+            return AnkUtils.A(elem.querySelectorAll('.tag > .text'))
+                    .map(function (e) AnkUtils.trim(e.textContent))
+                    .filter(function (s) s && s.length);
+          },
 
-        get shortTags () {
-          let limit = AnkPixiv.Prefs.get('shortTagsMaxLength', 8);
-          return AnkPixiv.info.illust.tags.filter(function (it) (it.length <= limit));
-        },
+          get shortTags () {
+            let limit = AnkPixiv.Prefs.get('shortTagsMaxLength', 8);
+            return AnkPixiv.info.illust.tags.filter(function (it) (it.length <= limit));
+          },
 
-        get tools ()
-          AnkPixiv.info.illust.worksData.tools,
+          get tools ()
+            AnkPixiv.info.illust.worksData.tools,
 
-        get width ()
-          let (sz = illust.size) (sz && sz.width),
+          get width ()
+            let (sz = illust.size) (sz && sz.width),
 
-        get height ()
-          let (sz = illust.size) (sz && sz.height),
+          get height ()
+            let (sz = illust.size) (sz && sz.height),
 
-        get server ()
-          AnkPixiv.info.path.largeStandardImage.match(/^http:\/\/([^\/\.]+)\./i)[1],
+          get server ()
+            AnkPixiv.info.path.largeStandardImage.match(/^http:\/\/([^\/\.]+)\./i)[1],
 
-        get title ()
-          AnkUtils.trim(AnkPixiv.elements.illust.title.textContent),
+          get title ()
+            AnkUtils.trim(AnkPixiv.elements.illust.title.textContent),
 
-        get comment ()
-          let (e = AnkPixiv.elements.illust.comment)
-            (e ? AnkUtils.textContent(e) : ''),
+          get comment ()
+            let (e = AnkPixiv.elements.illust.comment)
+              (e ? AnkUtils.textContent(e) : ''),
 
-        get R18 ()
-          AnkPixiv.info.illust.tags.some(function (v) 'R-18' == v),
+          get R18 ()
+            AnkPixiv.info.illust.tags.some(function (v) 'R-18' == v),
 
-        get mangaPages ()
-          AnkPixiv.info.illust.worksData.mangaPages,
+          get mangaPages ()
+            AnkPixiv.info.illust.worksData.mangaPages,
 
-        get worksData () {
-          let zp = AnkUtils.zeroPad;
-          let items = AnkUtils.A(AnkPixiv.elements.illust.worksData.querySelectorAll('.meta > li'));
-          let result = {};
-          items.forEach(function (item) {
-            item = item.textContent.replace(/\[ \u30DE\u30A4\u30D4\u30AF\u9650\u5B9A \]/, '').trim();
-            let m;
-            if (m = item.match(/(\d+)\/(\d+)\/(\d{4})[^\d]+(\d+):(\d+)/)) {
-              result.dateTime = {
-                year: zp(m[3], 4),
-                month: zp(m[1], 2),
-                day: zp(m[2], 2),
-                hour: zp(m[4], 2),
-                minute: zp(m[5], 2),
-              };
-            } else if (m = item.match(/(\d+)[^\d]+(\d+)[^\d]+(\d+)[^\d]+(\d+):(\d+)/)) {
-              result.dateTime = {
-                year: zp(m[1], 4),
-                month: zp(m[2], 2),
-                day: zp(m[3], 2),
-                hour: zp(m[4], 2),
-                minute: zp(m[5], 2),
-              };
-            } else if (m = item.match(/\u6F2B\u753B\s*(\d+)P/)) {
-              result.mangaPages = parseInt(m[1], 10);
-            } else if (m = item.match(/(\d+)\xD7(\d+)/)) {
-              result.size = {
-                width: parseInt(m[1], 10),
-                height: parseInt(m[2], 10),
-              };
-            } else {
-              result.tools = item;
-            }
-          });
-          return result;
-        }
-      };
-      'year month day hour minute'.split(/\s+/).forEach(function (name) {
-        illust.__defineGetter__(name, function () illust.dateTime[name]);
-      });
+          get worksData () {
+            let zp = AnkUtils.zeroPad;
+            let items = AnkUtils.A(AnkPixiv.elements.illust.worksData.querySelectorAll('.meta > li'));
+            let result = {};
+            items.forEach(function (item) {
+              item = item.textContent.replace(/\[ \u30DE\u30A4\u30D4\u30AF\u9650\u5B9A \]/, '').trim();
+              let m;
+              if (m = item.match(/(\d+)\/(\d+)\/(\d{4})[^\d]+(\d+):(\d+)/)) {
+                result.dateTime = {
+                  year: zp(m[3], 4),
+                  month: zp(m[1], 2),
+                  day: zp(m[2], 2),
+                  hour: zp(m[4], 2),
+                  minute: zp(m[5], 2),
+                };
+              } else if (m = item.match(/(\d+)[^\d]+(\d+)[^\d]+(\d+)[^\d]+(\d+):(\d+)/)) {
+                result.dateTime = {
+                  year: zp(m[1], 4),
+                  month: zp(m[2], 2),
+                  day: zp(m[3], 2),
+                  hour: zp(m[4], 2),
+                  minute: zp(m[5], 2),
+                };
+              } else if (m = item.match(/\u6F2B\u753B\s*(\d+)P/)) {
+                result.mangaPages = parseInt(m[1], 10);
+              } else if (m = item.match(/(\d+)\xD7(\d+)/)) {
+                result.size = {
+                  width: parseInt(m[1], 10),
+                  height: parseInt(m[2], 10),
+                };
+              } else {
+                result.tools = item;
+              }
+            });
+            return result;
+          }
+        };
+        'year month day hour minute'.split(/\s+/).forEach(function (name) {
+          illust.__defineGetter__(name, function () illust.dateTime[name]);
+        });
 
-      let member = {
-        get id ()
-          AnkUtils.A(AnkPixiv.elements.doc.querySelectorAll('script'))
-            .map(function(it) it.textContent.match(/pixiv.context.userId = '(\d+)';/))
-            .filter(function(it) it)[0][1],
+        let member = {
+          get id ()
+            AnkUtils.A(AnkPixiv.elements.doc.querySelectorAll('script'))
+              .map(function(it) it.textContent.match(/pixiv.context.userId = '(\d+)';/))
+              .filter(function(it) it)[0][1],
 
-        get pixivId ()
-          (AnkPixiv.elements.illust.avatar.src.match(/\/profile\/([^\/]+)\//)
-           ||
-           AnkPixiv.info.path.largeImage.match(/^https?:\/\/[^\.]+\.pixiv\.net\/(?:img\d+\/)?img\/([^\/]+)\//))[1],
+          get pixivId ()
+            (AnkPixiv.elements.illust.avatar.src.match(/\/profile\/([^\/]+)\//)
+             ||
+             AnkPixiv.info.path.largeImage.match(/^https?:\/\/[^\.]+\.pixiv\.net\/(?:img\d+\/)?img\/([^\/]+)\//))[1],
 
-        get name ()
-          AnkUtils.trim(AnkPixiv.elements.illust.userName.textContent),
+          get name ()
+            AnkUtils.trim(AnkPixiv.elements.illust.userName.textContent),
 
-        get memoizedName () {
-          let result = AnkPixiv.Storage.select(
-            'members',
-            'id = ?1',
-            function (stmt){
-              let result = [];
-              stmt.bindUTF8StringParameter(0, member.id);
-              while (stmt.executeStep())
-                result.push(AnkStorage.statementToObject(stmt));
-              return result;
-            }
-          );
-          return result && result.length && result[0].name;
-        },
-      };
-
-      let path = {
-        get ext ()
-          (AnkPixiv.info.path.largeStandardImage.match(/(\.\w+)(?:$|\?)/)[1] || '.jpg'),
-
-        get mangaIndexPage ()
-          AnkPixiv.currentLocation.replace(/(\?|&)mode=medium(&|$)/, "$1mode=manga$2"),
-
-        get largeImage ()
-          let (i = AnkPixiv.info.path)
-            AnkPixiv.in.manga ? i.getLargeMangaImage() : i.largeStandardImage,
-
-        get largeStandardImage ()
-          AnkPixiv.info.path.mediumImage.replace(/_m\./, '.'),
-
-        getLargeMangaImage: function (n, base, ext, originalSize) {
-          let url =
-            (base || AnkPixiv.info.path.largeStandardImage).replace(
-              /\.[^\.]+$/,
-              function (m) (('_p' + (n || 0)) + (ext || m))
+          get memoizedName () {
+            let result = AnkPixiv.Storage.select(
+              'members',
+              'id = ?1',
+              function (stmt){
+                let result = [];
+                stmt.bindUTF8StringParameter(0, member.id);
+                while (stmt.executeStep())
+                  result.push(AnkStorage.statementToObject(stmt));
+                return result;
+              }
             );
-          return originalSize ? url.replace(/_p(\d+)\./, '_big_p$1.') : url;
-        },
+            return result && result.length && result[0].name;
+          },
+        };
 
-        get mediumImage () {
-          // XXX 再投稿された、イラストのパスの末尾には、"?28737478..." のように数値がつく模様
-          // 数値を除去してしまうと、再投稿前の画像が保存されてしまう。
-          let result = AnkPixiv.elements.illust.mediumImage.src;//.replace(/\?.*$/, '');
-          // for pixiv_expand_thumbnail
-          //  http://userscripts.org/scripts/show/82175
-          result = result.replace(/_big_p0/, '');
-          return result;
-        }
-      };
+        let path = {
+          get ext ()
+            (AnkPixiv.info.path.largeStandardImage.match(/(\.\w+)(?:$|\?)/)[1] || '.jpg'),
 
-      return {
-        illust: illust,
-        member: member,
-        path: path
-      };
+          get mangaIndexPage ()
+            AnkPixiv.currentLocation.replace(/(\?|&)mode=medium(&|$)/, "$1mode=manga$2"),
+
+          get largeImage ()
+            let (i = AnkPixiv.info.path)
+              AnkPixiv.in.manga ? i.getLargeMangaImage() : i.largeStandardImage,
+
+          get largeStandardImage ()
+            AnkPixiv.info.path.mediumImage.replace(/_m\./, '.'),
+
+          getLargeMangaImage: function (n, base, ext, originalSize) {
+            let url =
+              (base || AnkPixiv.info.path.largeStandardImage).replace(
+                /\.[^\.]+$/,
+                function (m) (('_p' + (n || 0)) + (ext || m))
+              );
+            return originalSize ? url.replace(/_p(\d+)\./, '_big_p$1.') : url;
+          },
+
+          get mediumImage () {
+            // XXX 再投稿された、イラストのパスの末尾には、"?28737478..." のように数値がつく模様
+            // 数値を除去してしまうと、再投稿前の画像が保存されてしまう。
+            let result = AnkPixiv.elements.illust.mediumImage.src;//.replace(/\?.*$/, '');
+            // for pixiv_expand_thumbnail
+            //  http://userscripts.org/scripts/show/82175
+            result = result.replace(/_big_p0/, '');
+            return result;
+          }
+        };
+
+        return {
+          illust: illust,
+          member: member,
+          path: path
+        };
+      })(); // }}}
+
+      let nico = (function () { // {{{
+        return {
+          illust: illust,
+          member: member,
+          path: path
+        };
+      })(); // }}}
+
+      return AnkPixiv.in.pixiv ? pixiv :
+             AnkPixiv.in.nico  ? nico;
     })(), // }}}
 
     get infoText () { // {{{
