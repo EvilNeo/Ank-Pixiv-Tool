@@ -368,7 +368,8 @@ try {
       })(); // }}}
 
       return AnkPixiv.in.pixiv ? pixiv :
-             AnkPixiv.in.nico  ? nico;
+             AnkPixiv.in.nico  ? nico :
+                                 void 0;
     })(), // }}}
 
     get infoText () { // {{{
