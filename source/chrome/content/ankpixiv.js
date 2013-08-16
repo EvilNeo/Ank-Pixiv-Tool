@@ -196,8 +196,8 @@ try {
       };
     })(), // }}}
 
-    info: (function () { // {{{
-      let pixiv = (function () { // {{{
+    siteInfo: {
+      pixiv: (function () { // {{{
         let illust = {
           get id ()
             parseInt(AnkPixiv.elements.doc.querySelector('#rpc_i_id').textContent, 10),
@@ -357,20 +357,22 @@ try {
           member: member,
           path: path
         };
-      })(); // }}}
+      })(), // }}}
 
-      let nico = (function () { // {{{
+      nico: (function () { // {{{
         return {
-          illust: illust,
-          member: member,
-          path: path
+          //illust: illust,
+          //member: member,
+          //path: path
         };
-      })(); // }}}
+      })() // }}}
+    },
 
-      return AnkPixiv.in.pixiv ? pixiv :
-             AnkPixiv.in.nico  ? nico :
-                                 void 0;
-    })(), // }}}
+    get info () { // {{{
+      return AnkPixiv.in.pixiv ? AnkPixiv.siteInfo.pixiv :
+             AnkPixiv.in.nico  ? AnkPixiv.siteInfo.nico :
+                                 AnkPixiv.siteInfo.pixiv;
+    }, // }}}
 
     get infoText () { // {{{
       let ignore =
@@ -2246,7 +2248,7 @@ try {
   };
 
 } catch (error) {
- dump("[" + error.name + "]\n" +
+window.alert("[" + error.name + "]\n" +
       "  message: " + error.message + "\n" +
       "  filename: " + error.fileName + "\n" +
       "  linenumber: " + error.lineNumber + "\n" +
