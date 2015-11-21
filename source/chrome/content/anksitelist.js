@@ -10,6 +10,7 @@
       'sites/anknicosei.js',
       'sites/anknijie.js',
       'sites/ankpixiv.js',
+      'sites/ankpixivsketch.js',
       'sites/anktinami.js',
       'sites/anktumblr.js',
       'sites/anktwipple.js',
