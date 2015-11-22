@@ -42,7 +42,7 @@
         return self.elements.doc.querySelectorAll(q);
       }
 
-      var appObj = null;
+      var appObj = null;  // 作品情報JSONを保存
 
       let illust =  {
 
@@ -87,8 +87,7 @@
         // require for AnkBase.Viewer
 
         get body () {
-          let e = queryAll('body');
-          return e && e.length > 0 && e[0];
+          return query('body');
         },
 
         get wrapper () {
@@ -256,16 +255,20 @@
 
       var self = this;
 
-      if (self._functionsInstalled)
-        return;
+      if (!self._functionsInstalled || self._functionsInstalled != self.curdoc.location.href) {
+        if (self._functionsInstalled) {
+          // FIXME 多分過去のイベントハンドラなんかは削除しないといけない
+          AnkUtils.dump('re-initialize on location change: '+self._functionsInstalled+' -> '+self.curdoc.location.href);
+        }
 
-      self._functionsInstalled = true;
+        self._functionsInstalled = self.curdoc.location.href;
 
-      if (self.in.medium) {
-        this.installMediumPageFunctions();
-      }
-      else {
-        this.installListPageFunctions();
+        if (self.in.medium) {
+          this.installMediumPageFunctions();
+        }
+        else {
+          this.installListPageFunctions();
+        }
       }
     },
 
@@ -276,7 +279,7 @@
       if (!this._functionsInstalled)
         return false;
 
-      if (this.in.medium && !this.in.myIllust)
+      if (this.in.medium)
         return { illust_id:this.getIllustId(), service_id:this.SERVICE_ID };
     },
 
@@ -320,7 +323,7 @@
         ['.RenderItemComponent > .RenderItemComponentHeader > .RenderItemComponentHeaderUser > .RenderItemComponentHeaderUserTime > a', 4]
       ];
 
-      return AnkBase.markDownloaded(IsIllust, Targets, false, this, node, force, ignorePref);
+      return AnkBase.markDownloaded(IsIllust, Targets, true, this, node, force, ignorePref);
     }, // }}}
 
     /*
@@ -361,19 +364,13 @@
      */
     installMediumPageFunctions: function () { // {{{
 
-
       let proc = function () {
         // インストールに必用な各種要素
-        var body = doc.querySelector('body');
-        if (!(body && doc.readyState === 'complete')) {
-          return false;   // リトライしてほしい
-        }
-
+        var body = self.elements.illust.body;
         var medImg = self.elements.illust.mediumImage;
-        var appObj = self.elements.illust.AppObject;
 
         // 完全に読み込まれていないっぽいときは、遅延する
-        if (!(medImg && appObj)) { // {{{
+        if (!(body && doc.readyState === 'complete') || !medImg) { // {{{
           return false;   // リトライしてほしい
         } // }}}
 
@@ -401,70 +398,18 @@
      */
     installListPageFunctions: function () { /// {
 
-      // FIXME 未実装
-      return;
-
-      // TODO AutoPagerizeと違い、追加伸長した要素だけでなく、すべての要素のチェックが走る
-      let followExpansion = function () {
-        var recommend = self.elements.illust.recommendList;
-        var feed = self.elements.illust.feedList;
-        var ranking = self.elements.illust.rankingList;
-
-        let elm = recommend || feed || ranking;
-        if (!elm) {
-          return false;     // リトライしてほしい
-        }
-
-        // 伸びるおすすめリストに追随する
-        new MutationObserver(function (o) {
-          o.forEach(e => self.markDownloaded(e.target, true));
-        }).observe(elm, {childList: true});
-
-        return true;
-      };
-
-      let autoPagerize = function () {
-        var aptarget = self.elements.illust.autoPagerizeTarget;
-
-        if (!(doc && aptarget)) {
-          return false;     // リトライしてほしい
-        }
-
-        // AutoPagerizeによる継ぎ足し動作
-        // TODO サイト別.jsに個別に書くのはよくない気がする
-        doc.addEventListener(
-          'AutoPagerize_DOMNodeInserted',
-          function (e) {
-            let a = [];
-            if (e.target.classList.contains('image-item')) {
-              a.push(e.target);
-            }
-            else {
-              [
-                '._image-items > li',              // フォロー新着作品＆○○さんの作品一覧
-                '.ranking-items > .ranking-item'  // ランキング
-              ].
-              some(function (q) {
-                let n = e.target.querySelectorAll(q);
-                return n && n.length > 0 && !!(a = AnkUtils.A(n));
-              });
-            }
-            if (a && a.length > 0)
-              a.forEach(node => self.markDownloaded(node, true));
-          },
-          false
-        );
-
-        return true;
-      };
+      // FIXME 伸びるページに未対応
 
       let delayMarking = function () {
-        if (typeof doc === 'undefined' || !doc || doc.readyState !== "complete") {
-          return false;     // リトライしてほしい
-        }
+        // インストールに必用な各種要素
+        var body = self.elements.illust.body;
 
-        // プレミアムユーザーでない絵師さんの作品一覧は遅延が発生するのでonFocusによる処理だけではマークがつかない
-        self.markDownloaded(doc,true);
+        // 完全に読み込まれていないっぽいときは、遅延する
+        if (!(body && doc.readyState === 'complete')) { // {{{
+          return false;   // リトライしてほしい
+        } // }}}
+
+        self.markDownloaded(doc,　true);
 
         return true;
       };
@@ -474,10 +419,6 @@
 
       // install now
       if (AnkBase.Prefs.get('markDownloaded', false)) {
-        if (this.in.bookmarkList || this.in.bookmarkAdd || this.in.feedList || this.in.rankingList) {
-          AnkBase.delayFunctionInstaller(followExpansion, 500, 20, self.SITE_NAME, 'followExpansion');
-        }
-        AnkBase.delayFunctionInstaller(autoPagerize, 500, 20, self.SITE_NAME, 'autoPagerize');
         AnkBase.delayFunctionInstaller(delayMarking, 500, 20, self.SITE_NAME, 'delayMarking');
       }
     }

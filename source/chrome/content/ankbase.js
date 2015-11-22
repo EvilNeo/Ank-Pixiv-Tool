@@ -7,6 +7,7 @@ Components.utils.import("resource://gre/modules/NetUtil.jsm");
 Components.utils.import("resource:///modules/CustomizableUI.jsm");
 Components.utils.import("resource://gre/modules/Promise.jsm");
 Components.utils.import("resource://gre/modules/Task.jsm");
+Components.utils.import("resource://gre/modules/XPCOMUtils.jsm");
 
 (function (global) {
 
@@ -1828,6 +1829,9 @@ Components.utils.import("resource://gre/modules/Task.jsm");
         }
       }
 
+      // FIXME 下の pageshow や focus と同じ位置では動かない…？
+      AnkBase.addLocationChangeListener();
+
       if (AnkBase.Storage) {
         // 初期化済み
         return;
@@ -1858,11 +1862,12 @@ Components.utils.import("resource://gre/modules/Task.jsm");
           if (firstRun()) {
             window.addEventListener("load", () => AnkBase.addToolbarIcon(), false);
           }
-          yield AnkBase.Storage.createDatabase()
+          yield AnkBase.Storage.createDatabase();
           yield AnkBase.updateDatabaseVersion();
           window.addEventListener('ankDownload', AnkBase.downloadHandler, true);
           window.addEventListener('pageshow', AnkBase.onFocus, true);
           window.addEventListener('focus', AnkBase.onFocus, true);
+
           setInterval(e => AnkBase.cleanupDownload(), AnkBase.DOWNLOAD_THREAD.CLEANUP_INTERVAL);
         }
       }).then(null).catch(function (e)  {
@@ -1896,7 +1901,7 @@ Components.utils.import("resource://gre/modules/Task.jsm");
 
         location = 'location: '+doc.location;
         let curmod = (function () {
-          let mod = AnkBase.currentModule(doc)
+          let mod = AnkBase.currentModule(doc);
           if (mod) {
             AnkUtils.dump('already installed: '+ev.type+', '+location);
             return mod;
@@ -1925,6 +1930,79 @@ Components.utils.import("resource://gre/modules/Task.jsm");
         AnkUtils.dumpError(e,false,location);
       }
     }, // }}}
+
+    /**
+     * ロケーションバーの値が変わったイベントを拾う
+     */
+    addLocationChangeListener: function () {
+      var myExtension = {
+        oldURL: null,
+
+        init: function() {
+          gBrowser.addProgressListener(this);
+        },
+
+        uninit: function() {
+          gBrowser.removeProgressListener(this);
+        },
+
+        processNewURL: function(aProgress, aRequest, aURI) {
+          if (aURI.spec == this.oldURL)
+            return;
+
+          AnkUtils.dump('rise location change: '+this.oldURL+' -> '+aURI.spec);
+
+          this.oldURL = aURI.spec;
+
+          var doc = aProgress.contentViewer.DOMDocument;
+
+          var location = 'location: '+doc.location.href;
+          var curmod = (function () {
+            let mod = AnkBase.currentModule(doc);
+            if (mod) {
+              AnkUtils.dump('already installed: progress, '+location);
+              return mod;
+            }
+
+            AnkUtils.dump('triggered: progress, '+location);
+            return AnkBase.installSupportedModule(doc);
+          })();
+
+          if (!curmod) {
+            AnkBase.changeToolbarIconEnabled.call(AnkBase, null, AnkBase.TOOLBAR_BUTTON.IMAGE);
+            AnkBase.changeToolbarIconEnabled.call(AnkBase, null, AnkBase.MENU_ITEM.ID);
+            return;       // 対象外のサイト
+          }
+          AnkBase.changeToolbarIconEnabled.call(AnkBase, curmod, AnkBase.TOOLBAR_BUTTON.IMAGE);
+          AnkBase.changeToolbarIconEnabled.call(AnkBase, curmod, AnkBase.MENU_ITEM.ID);
+
+          curmod.initFunctions();
+        },
+
+        // nsIWebProgressListener
+        QueryInterface: XPCOMUtils.generateQI(["nsIWebProgressListener", "nsISupportsWeakReference"]),
+
+        onLocationChange: function(aProgress, aRequest, aURI) {
+          this.processNewURL(aProgress, aRequest, aURI);
+        },
+
+        onStateChange: function() {},
+        onProgressChange: function() {},
+        onStatusChange: function() {},
+        onSecurityChange: function() {}
+      };
+
+      function onLoad () {
+        myExtension.init();
+      }
+
+      function onUnload () {
+        myExtension.uninit();
+      }
+
+      window.addEventListener('load', onLoad , false);
+      window.addEventListener('unload', onUnload, false);
+    },
 
     /**
      * ツール―バーボタンクリックのイベントハンドラ
