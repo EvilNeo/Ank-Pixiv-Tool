@@ -364,7 +364,7 @@ Components.utils.import("resource://gre/modules/Task.jsm");
       const Targets = [
                         ['div.nijie > div.picture > p.nijiedao > a', 3],  // 通常の一覧
                         ['div.nijie > p.nijiedao > a', 2],                // "同人"の一覧
-                        ['div.nijie-bookmark > p > a', 2],                // "ブックマーク"の一覧
+                        ['.nijie-bookmark > .picture > .nijiedao > a', 2],                // "ブックマーク"の一覧
                         ['#okazu_list > a', -1],                          // おかず
                         ['#carouselInner-view > ul > li > a', 1],         // "こんな絵でも"
                       ];

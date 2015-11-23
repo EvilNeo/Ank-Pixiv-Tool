@@ -264,10 +264,10 @@
         self._functionsInstalled = self.curdoc.location.href;
 
         if (self.in.medium) {
-          this.installMediumPageFunctions();
+          self.installMediumPageFunctions();
         }
         else {
-          this.installListPageFunctions();
+          self.installListPageFunctions();
         }
       }
     },

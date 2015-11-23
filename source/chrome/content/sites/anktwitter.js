@@ -411,24 +411,33 @@ Components.utils.import("resource://gre/modules/Task.jsm");
      * ファンクションのインストール
      */
     initFunctions: function () {
-      if (this._functionsInstalled)
-        return;
 
-      this._functionsInstalled = true;
+      var self = this;
 
-      var inits = function () {
+      if (!self._functionsInstalled || self._functionsInstalled != self.curdoc.location.href) {
+        if (self._functionsInstalled) {
+          // FIXME 多分過去のイベントハンドラなんかは削除しないといけない
+          AnkUtils.dump('re-initialize on location change: '+self._functionsInstalled+' -> '+self.curdoc.location.href);
+        }
+
+        self._functionsInstalled = self.curdoc.location.href;
+
+        self._image = null;
+
         if (self.in.medium) {
           self.installMediumPageFunctions();
         }
         else {
           self.installListPageFunctions();
         }
-      };
+      }
+
+      if (self._functionsInstalled) {
+        // ２回目からはここで終了
+        return;
+      }
 
       // Illust/List共通のFunction
-
-      var self = this;
-      var doc = this.curdoc;
 
       // ページ移動
       var contentChange = function () {
@@ -496,11 +505,9 @@ Components.utils.import("resource://gre/modules/Task.jsm");
 
       //
 
+      var doc = self.curdoc;
       var timeoutId = null;
 
-      inits();
-
-      AnkBase.delayFunctionInstaller(contentChange, 500, 60, self.SITE_NAME, 'contentChange');
       AnkBase.delayFunctionInstaller(galleryOpen, 500, 60, self.SITE_NAME, 'galleryOpen');
       AnkBase.delayFunctionInstaller(galleryChanged, 500, 60, self.SITE_NAME, 'galleryChanged');
     },
@@ -562,7 +569,6 @@ Components.utils.import("resource://gre/modules/Task.jsm");
           return;
         }
 
-        console.log('ccc');
         let context = new AnkBase.Context(self);
         let ev = AnkBase.createDownloadEvent(context, useDialog, debug);
         window.dispatchEvent(ev);
@@ -577,12 +583,13 @@ Components.utils.import("resource://gre/modules/Task.jsm");
     markDownloaded: function (node, force, ignorePref) { // {{{
       const IsIllust = /^https?:\/\/(?:pbs\.twimg\.com\/media|t\.co)\/([^/]+?)(?:$|\.)/;
       const Targets = [
-                        ['span.media-thumbnail > img', 1],  // thumbnail
-                        ['div.cards-multimedia > a.media-thumbnail > div > img', 3],  // photo (list/tweet)
-                        ['.original-tweet div.cards-multimedia > div.multi-photos > div.photo-1 > img', 3],  // multi-photo (list)
-                        ['.js-original-tweet div.cards-multimedia > div.multi-photos > div.photo-1 > img', 3],  // multi-photo (tweet)
-                        ['.TwitterPhoto a.TwitterPhoto-link > img', 2], // photo (media)
-                        ['.TwitterMultiPhoto div.TwitterMultiPhoto-image--1 > img', 2], // multi-photo (media)
+                        ['span.tweet-media-img-placeholder > img', 1],  // thumbnail
+                        ['.OldMedia-photoContainer > img', 1],  // photo (list)
+                        //['div.cards-multimedia > a.media-thumbnail > div > img', 3],  // photo (list/tweet)
+                        //['.original-tweet div.cards-multimedia > div.multi-photos > div.photo-1 > img', 3],  // multi-photo (list)
+                        //['.js-original-tweet div.cards-multimedia > div.multi-photos > div.photo-1 > img', 3],  // multi-photo (tweet)
+                        //['.TwitterPhoto a.TwitterPhoto-link > img', 2], // photo (media)
+                        //['.TwitterMultiPhoto div.TwitterMultiPhoto-image--1 > img', 2], // multi-photo (media)
                       ];
 
       return AnkBase.markDownloaded(IsIllust, Targets, 2, this, node, force, ignorePref);
@@ -836,43 +843,52 @@ Components.utils.import("resource://gre/modules/Task.jsm");
      */
     installListPageFunctions: function () { /// {
 
-      let followExpansion = function () {
-        let newGrid = self.elements.doc.querySelector('.AppContent-main .GridTimeline-items');
-        let grid = self.elements.doc.querySelector('.stream-media-grid-items');
-        let items = self.elements.doc.querySelector('.stream-items');
+      let proc = function () {
+        let followExpansion = function () {
+          let items = self.elements.doc.querySelector('#stream-items-id');
 
-        let elm = grid || items || newGrid;
-        if (!elm) {
+          let elm = items;
+          if (!elm) {
+            return false;     // リトライしてほしい
+          }
+
+          // 伸びるおすすめリストに追随する
+          if (MutationObserver) {
+            new MutationObserver(function (o) {
+              o.forEach(e =>self.markDownloaded(e.target, true));
+            }).observe(elm, {childList: true});
+          }
+
+          return true;
+        };
+
+        let delayMarking = function () {
+          if (typeof doc === 'undefined' || !doc || doc.readyState !== "complete") {
+            return false;     // リトライしてほしい
+          }
+
+          self.markDownloaded(doc,true);
+
+          return true;
+        };
+
+        // FIXME ページ遷移時にサムネイルにマークがつかない
+        let timeline = doc.querySelector('#timeline');
+        if (!timeline) {
           return false;     // リトライしてほしい
         }
 
-        // 伸びるおすすめリストに追随する
-        if (MutationObserver) {
-          new MutationObserver(function (o) {
-            o.forEach(e =>self.markDownloaded(e.target, true));
-          }).observe(elm, {childList: true});
-        }
-
-        return true;
-      };
-
-      let delayMarking = function () {
-        if (typeof doc === 'undefined' || !doc || doc.readyState !== "complete") {
-          return false;     // リトライしてほしい
-        }
-
-        self.markDownloaded(doc,true);
-
+        // install now
+        AnkBase.delayFunctionInstaller(followExpansion, 500, 60, self.SITE_NAME, 'followExpansion');
+        AnkBase.delayFunctionInstaller(delayMarking, 500, 60, self.SITE_NAME, 'delayMarking');
         return true;
       };
 
       var self = this;
       var doc = this.curdoc;
 
-      // install now
       if (AnkBase.Prefs.get('markDownloaded', false)) {
-        AnkBase.delayFunctionInstaller(followExpansion, 500, 60, self.SITE_NAME, 'followExpansion');
-        AnkBase.delayFunctionInstaller(delayMarking, 500, 60, self.SITE_NAME, 'delayMarking');
+        AnkBase.delayFunctionInstaller(proc, 500, 60, self.SITE_NAME, 'listPageFunction');
       }
     } // }}}
 

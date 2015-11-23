@@ -1251,27 +1251,29 @@ Components.utils.import("resource://gre/modules/XPCOMUtils.jsm");
             local_path: local_path,
             filename:   relPath
           };
+
           yield Task.spawn(function () {
             let qa = [];
             qa.push({ type:'insert', table:'histories', set:download.history });
             yield AnkBase.Storage.update(AnkBase.Storage.getUpdateSQLs(qa));
           }).then(null).catch(e => AnkUtils.dumpError(e,true));
-
-          if (AnkBase.Prefs.get('saveMeta', true))
-            AnkBase.saveTextFile(destFiles.meta, metaText);
-
-          if (AnkBase.Prefs.get('showCompletePopup', true))
-            AnkBase.popupAlert(caption, text);
-
-          AnkUtils.dump('download completed: '+images.length+' pics in '+(new Date().getTime() - start)+' msec');
-
-          AnkBase.removeDownload(download, AnkBase.DOWNLOAD_DISPLAY.DOWNLOADED);
-
-          // たまたま開いているタブがダウンロードが完了したのと同じサイトだったならマーキング処理
-          AnkBase.insertOrMarkToAllTabs(service_id, illust_id, function (curmod) {
-            curmod.markDownloaded(illust_id, true);
-          });
         }
+
+        if (AnkBase.Prefs.get('saveMeta', true))
+          AnkBase.saveTextFile(destFiles.meta, metaText);
+
+        if (AnkBase.Prefs.get('showCompletePopup', true))
+          AnkBase.popupAlert(caption, text);
+
+        AnkUtils.dump('download completed: '+images.length+' pics in '+(new Date().getTime() - start)+' msec');
+
+        AnkBase.removeDownload(download, AnkBase.DOWNLOAD_DISPLAY.DOWNLOADED);
+
+        // たまたま開いているタブがダウンロードが完了したのと同じサイトだったならマーキング処理
+        AnkBase.insertOrMarkToAllTabs(service_id, illust_id, function (curmod) {
+          curmod.markDownloaded(illust_id, true);
+        });
+
       }).then(null).catch(function (e) { AnkUtils.dumpError(e); onError(e); });
     }, // }}}
 
@@ -1865,7 +1867,7 @@ Components.utils.import("resource://gre/modules/XPCOMUtils.jsm");
           yield AnkBase.Storage.createDatabase();
           yield AnkBase.updateDatabaseVersion();
           window.addEventListener('ankDownload', AnkBase.downloadHandler, true);
-          window.addEventListener('pageshow', AnkBase.onFocus, true);
+          //window.addEventListener('pageshow', AnkBase.onFocus, true);
           window.addEventListener('focus', AnkBase.onFocus, true);
 
           setInterval(e => AnkBase.cleanupDownload(), AnkBase.DOWNLOAD_THREAD.CLEANUP_INTERVAL);
@@ -1936,6 +1938,7 @@ Components.utils.import("resource://gre/modules/XPCOMUtils.jsm");
      */
     addLocationChangeListener: function () {
       var myExtension = {
+
         oldURL: null,
 
         init: function() {
