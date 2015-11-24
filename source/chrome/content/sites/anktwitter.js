@@ -197,7 +197,7 @@ Components.utils.import("resource://gre/modules/Task.jsm");
         },
 
         get tweet () {
-          return query('.permalink-tweet');
+          return query('.opened-tweet.permalink-tweet');
         },
 
         get gallery () {
@@ -766,7 +766,7 @@ Components.utils.import("resource://gre/modules/Task.jsm");
           if (doc.querySelector('.ank-pixiv-downloaded-filename'))
             return;
 
-          let e = doc.querySelector('.client-and-actions');
+          let e = doc.querySelector('.opened-tweet.permalink-tweet .client-and-actions');
           if (e) {
             {
               let div = doc.createElement('div');
