@@ -236,6 +236,12 @@ Components.utils.import("resource://gre/modules/Task.jsm");
             return illust.mediaImage || illust.animatedGif || illust.photoImage;
         },
 
+        get galleryImageContainers () {
+          if (self.in.gallery) {
+            return self.elements.doc.querySelectorAll('.Gallery-content .OldMedia > .OldMedia-container .OldMedia-photoContainer');
+          }
+        },
+
         get wrapper () {
           return query('#page-outer');
         },
@@ -414,6 +420,8 @@ Components.utils.import("resource://gre/modules/Task.jsm");
 
       var self = this;
 
+      var firstInit = !self._functionsInstalled;
+
       if (!self._functionsInstalled || self._functionsInstalled != self.curdoc.location.href) {
         if (self._functionsInstalled) {
           // FIXME 多分過去のイベントハンドラなんかは削除しないといけない
@@ -432,30 +440,14 @@ Components.utils.import("resource://gre/modules/Task.jsm");
         }
       }
 
-      if (self._functionsInstalled) {
+      if (!firstInit) {
         // ２回目からはここで終了
         return;
       }
 
       // Illust/List共通のFunction
 
-      // ページ移動
-      var contentChange = function () {
-        let content = doc.querySelector('div.route-profile, div.route-permalink, div.route-home, div#doc');
-        if (!(content && doc.readyState === 'complete')) {
-          return false;   // リトライしてほしい
-        }
-
-        new MutationObserver(function (o) {
-          AnkUtils.dump('rise contentChange: '+self.curdoc.location.href);
-          self._image = null;  // 入れ替わりがあるので、ここでリセット
-          inits();
-        }).observe(content, {attributes: true});
-
-        return true;
-      };
-
-      // ギャラリーオープン
+     // ギャラリーオープン
       var galleryOpen = function () {
         let body = doc.querySelector('body');
         if (!(body && doc.readyState === 'complete')) {
@@ -530,6 +522,7 @@ Components.utils.import("resource://gre/modules/Task.jsm");
 
       let image = this._getImageUrl();
 
+      // FIXME 複数枚DL時に illustId が先頭の画像の値にならない
       // twitter自身で保存しているものは画像ファイル名をillust_idにする
       if (!image || image.images.length == 0)
         return null;
@@ -625,21 +618,16 @@ Components.utils.import("resource://gre/modules/Task.jsm");
         }
 
         if (self.in.gallery) {
-          // ギャラリーでは複数絵のtweetでも１枚しか表示されないので、tweetページを参照して全部持ってくる
-          let dt = self.elements.illust.galleryDatetime;
-          if (!dt)
-            return null;
+          var m = Array.prototype.map.call(self.elements.illust.galleryImageContainers, function (e) {
+            return self._convertImageUrl(e.getAttribute('data-image-url'));
+          }).filter(function (s) {
+            return !!s;
+          });
+          if (m.length == 0) {
+            return setSelectedImage(null);
+          }
 
-          let href = dt.href;
-          let html = yield AnkUtils.httpGETAsync(href, self.curdoc.location.href);
-          let doc = AnkUtils.createHTMLDocument(html);
-          if (!doc)
-            return null;
-          let o = Array.slice(doc.querySelectorAll('.permalink-footer > .cards-media-container .multi-photo')).
-                    map(s => s.getAttribute('data-url'));
-          let m = self._convertImageUrls(o);
-          if (m.length > 1)
-            return setSelectedImage({ images: m, facing: null });
+          return setSelectedImage({ images: m, facing: null });
         }
 
         return setSelectedImage(self._getImageUrl());
@@ -677,59 +665,56 @@ Components.utils.import("resource://gre/modules/Task.jsm");
       if (!e)
         return null;
 
-      let o = [];
-      if (e instanceof NodeList) {
-        // multi photo
-        AnkUtils.A(e).forEach(function (s) {
-          o.push(s.getAttribute('data-url') || s.getAttribute('data-image-url'));
-        });
-      }
-      else {
-        // photo or animatedGif
-        o.push(self.elements.illust.animatedGif ? e.getAttribute('video-src') : e.src);
-      }
+      let m = (function () {
+        if (e instanceof NodeList) {
+          // multi photo
+          return Array.prototype.map.call(e, function (s) {
+            return self._convertImageUrl(s.getAttribute('data-url') || s.getAttribute('data-image-url'));
+          });
+        }
 
-      let m = self._convertImageUrls(o);
-      if (!m)
-        return null;
+        // photo or animatedGif
+        return [self._convertImageUrl(self.elements.illust.animatedGif ? e.getAttribute('video-src') : e.src)];
+      })().filter(function (s) {
+        return !!s;
+      });
+
+      if (m.length == 0) {
+        return;
+      }
 
       return { images: m, facing: null };
     },
 
-    _convertImageUrls: function (o) {
-      let urls = [];
-      o.forEach(function (s) {
-        let m = s.match(/\/proxy\.jpg\?.*?t=(.+?)(?:$|&)/);
-        if (m) {
-          try {
-            let b64 = m[1];
-            let b64dec = window.atob(b64.replace(/-/g,'+').replace(/_/g,'/'));
-            let index = b64dec.indexOf('http');
-            let lenb = b64dec.substr(0, index);
-            let len = lenb.charCodeAt(lenb.length-1);
-            s = b64dec.substr(index, len);
+    _convertImageUrl: function (s) {
+      let m = s.match(/\/proxy\.jpg\?.*?t=(.+?)(?:$|&)/);
+      if (m) {
+        try {
+          let b64 = m[1];
+          let b64dec = window.atob(b64.replace(/-/g,'+').replace(/_/g,'/'));
+          let index = b64dec.indexOf('http');
+          let lenb = b64dec.substr(0, index);
+          let len = lenb.charCodeAt(lenb.length-1);
+          s = b64dec.substr(index, len);
 
-            AnkUtils.dump('BASE64: '+b64);
-            AnkUtils.dump('DECODED: '+s);
-          }
-          catch (e) {
-            AnkUtils.dumpError(e);
-            window.alert(AnkBase.Locale.get('serverError'));
-            return null;
+          AnkUtils.dump('BASE64: '+b64);
+          AnkUtils.dump('DECODED: '+s);
+        }
+        catch (e) {
+          AnkUtils.dumpError(e);
+          window.alert(AnkBase.Locale.get('serverError'));
+          return null;
+        }
+      }
+      else {
+        s = s.replace(/:large/, '');
+        if (/^https?:\/\/pbs\.twimg\.com\/media\//.test(s)) {
+          if (!/\.\w+(:\w+)$/.test(s)) {
+            s += ':orig';
           }
         }
-        else {
-          s = s.replace(/:large/, '');
-          if (/^https?:\/\/pbs\.twimg\.com\/media\//.test(s)) {
-            if (!/\.\w+(:\w+)$/.test(s)) {
-              s += ':orig';
-            }
-          }
-        }
-        urls.push(s);
-      });
-
-      return urls;
+      }
+      return s;
     },
 
     /********************************************************************************
