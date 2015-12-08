@@ -238,7 +238,7 @@ Components.utils.import("resource://gre/modules/Task.jsm");
 
         get galleryImageContainers () {
           if (self.in.gallery) {
-            return self.elements.doc.querySelectorAll('.Gallery-content .OldMedia > .OldMedia-container .OldMedia-photoContainer');
+            return self.elements.doc.querySelectorAll('.Gallery-content .AdaptiveMedia > .AdaptiveMedia-container .AdaptiveMedia-photoContainer');
           }
         },
 
@@ -577,7 +577,7 @@ Components.utils.import("resource://gre/modules/Task.jsm");
       const IsIllust = /^https?:\/\/(?:pbs\.twimg\.com\/media|t\.co)\/([^/]+?)(?:$|\.)/;
       const Targets = [
                         ['span.tweet-media-img-placeholder > img', 1],  // thumbnail
-                        ['.OldMedia-photoContainer > img', 1],  // photo (list)
+                        ['.AdaptiveMedia-photoContainer > img', 1],  // photo (list)
                         //['div.cards-multimedia > a.media-thumbnail > div > img', 3],  // photo (list/tweet)
                         //['.original-tweet div.cards-multimedia > div.multi-photos > div.photo-1 > img', 3],  // multi-photo (list)
                         //['.js-original-tweet div.cards-multimedia > div.multi-photos > div.photo-1 > img', 3],  // multi-photo (tweet)
