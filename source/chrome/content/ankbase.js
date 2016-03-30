@@ -37,7 +37,7 @@ Components.utils.import("resource://gre/modules/XPCOMUtils.jsm");
 
       function loadScript(m, obj) {
         try {
-          console.log('MODULE LOAD: ' + m);
+          AnkUtils.logStringMessage('MODULE LOAD: ' + m);
           let scope = obj || {};
           Services.scriptloader.loadSubScript('chrome://ankpixiv/content/' + m, scope, 'UTF-8');
           return scope;
@@ -683,6 +683,9 @@ Components.utils.import("resource://gre/modules/XPCOMUtils.jsm");
         // ダウンロード通知
         let progressListener = {
           onStateChange: function (_webProgress, _request, _stateFlags, _status) {
+            if (!_request)
+              return;
+
             _request.QueryInterface(Components.interfaces.nsIHttpChannel);
             // XXX pixiv のアホサーバは、PNG にも image/jpeg を返してくるぞ！！
             // AnkUtils.dump(_request.getResponseHeader('Content-Type'));

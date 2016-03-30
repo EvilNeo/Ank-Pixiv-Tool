@@ -126,7 +126,7 @@ Components.utils.import("resource://gre/modules/Task.jsm");
         // 自前画像(twimg)
         get mediaContainer () {
           let e = illust.tweet;
-          return e && e.querySelector('.js-expansion-container .js-adaptive-media-container');
+          return e && e.querySelector('.js-adaptive-media-container');
         },
 
         get mediaImage () {
@@ -797,7 +797,8 @@ Components.utils.import("resource://gre/modules/Task.jsm");
           createDebugMessageArea();
 
         // 中画像クリック時に保存する
-        let useViewer = AnkBase.Prefs.get('largeOnMiddle', true) && AnkBase.Prefs.get('largeOnMiddle.'+self.SITE_NAME, true);
+        //let useViewer = AnkBase.Prefs.get('largeOnMiddle', true) && AnkBase.Prefs.get('largeOnMiddle.'+self.SITE_NAME, true);
+        let useViewer = false;
         let useClickDownload = AnkBase.Prefs.get('downloadWhenClickMiddle', false);
         if (medImg && (useViewer || useClickDownload))
           addMiddleClickEventListener();
