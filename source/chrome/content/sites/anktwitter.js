@@ -49,10 +49,6 @@ Components.utils.import("resource://gre/modules/Task.jsm");
           self.elements.illust.photoFrame;          // 外部画像連携
       },
 
-      get videoTweet() {
-        return self.elements.illust.videoFrame;
-      },
-
       get gallery () { // {{{
         return self.elements.illust.galleryEnabled;
       }// }}}
@@ -141,26 +137,12 @@ Components.utils.import("resource://gre/modules/Task.jsm");
 
         get animatedGif () {
           let e = illust.tweet;
-          return e && e.querySelector('.AdaptiveMedia-videoContainer > video.animated-gif > source');
-        },
-
-        get videoFrame () {
-          return getCard2Frame('__entity_video', 'player');
-        },
-
-        get videoContent () {
-          let e = illust.videoFrame.contentDocument;
           if (e) {
-            let f = e.querySelector('iframe');
+            let f = e.querySelector('.PlayableMedia-player > iframe');
             f = f && f.contentDocument;
-            f = f && f.querySelector('video');
+            f = f && f.querySelector('.player-wrapper video');
             if (f)
               return f;
-
-            let c = e.querySelector('#ExternalIframeContainer');
-            if (c && c.getAttribute('data-player-config')) {
-              return c;
-            }
           }
         },
 
@@ -511,7 +493,7 @@ Components.utils.import("resource://gre/modules/Task.jsm");
       if (!this._functionsInstalled)
         return false;
 
-      if (this.in.gallery || this.in.videoTweet || (this.in.tweet && this.in.illustTweet))  // ポップアップしている or イラストツイート
+      if (this.in.gallery || (this.in.tweet && this.in.illustTweet))  // ポップアップしている or イラストツイート
         return { illust_id:this.getIllustId(), service_id:this.SERVICE_ID };
     },
 
@@ -637,26 +619,6 @@ Components.utils.import("resource://gre/modules/Task.jsm");
     _getImageUrl: function () {
       let self = this;
 
-      if (!self.in.gallery && self.in.videoTweet) {
-        let c = self.elements.illust.videoContent;
-        let m = [];
-        if (c.tagName.toLowerCase() === 'video') {
-          m.push(c.src);
-        }
-        else {
-          try {
-            JSON.parse(c.getAttribute('data-player-config'), function (key, value) {
-              if (key === 'source')
-                m.push(value);
-            });
-          }
-          catch (e) {
-            //
-          }
-        }
-        return { images: m, facing: null };
-      }
-
       let e =
         self.in.gallery                  ? self.elements.illust.mediumImage :
         self.elements.illust.photoFrame  ? self.elements.illust.photoImage :
@@ -674,7 +636,7 @@ Components.utils.import("resource://gre/modules/Task.jsm");
         }
 
         // photo or animatedGif
-        return [self._convertImageUrl(self.elements.illust.animatedGif ? e.getAttribute('video-src') : e.src)];
+        return [self._convertImageUrl(e.src)];
       })().filter(function (s) {
         return !!s;
       });
@@ -732,12 +694,9 @@ Components.utils.import("resource://gre/modules/Task.jsm");
         var medImg = self.elements.illust.mediumImage;
         var largeLink = self.elements.illust.largeLink;
         var photoFrame = self.in.tweet ? self.elements.illust.photoFrame : null;
-        var videoFrame = self.in.tweet ? self.elements.illust.videoFrame : null;
 
         // 完全に読み込まれていないっぽいときは、遅延する
         let cond = (function () {
-          if (videoFrame)
-            return self.elements.illust.videoContent;
           if (photoFrame)
             return medImg && self.elements.illust.photoImage;
           return medImg && largeLink;
