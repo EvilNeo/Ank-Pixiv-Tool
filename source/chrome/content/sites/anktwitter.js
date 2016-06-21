@@ -179,7 +179,7 @@ Components.utils.import("resource://gre/modules/Task.jsm");
         },
 
         get tweet () {
-          return query('.opened-tweet.permalink-tweet');
+          return query('.permalink-tweet');
         },
 
         get gallery () {
